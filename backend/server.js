@@ -4,7 +4,13 @@ const {Server} = require("socket.io");
 const generateResponse = require("./src/services/ai.services");
 
 const httpServer = createServer(app);
-const io = new Server(httpServer);
+const io = new Server(httpServer, {
+    cors: {
+        origin: "http://localhost:5173",
+    },
+});
+
+const chatHistory = [];
 
 io.on("connection", (socket) => {
     console.log("a user connected");
@@ -14,9 +20,22 @@ io.on("connection", (socket) => {
     });
 
     socket.on("ai-message", async(data) => {
-        console.log("Received message from client: ", data.prompt);
-        const response = await generateResponse(data.prompt);
+        console.log("Received message from client: ", data);
+        
+        chatHistory.push({
+            role: "user",
+            parts: [ { text: data }]
+        });
+
+        const response = await generateResponse(chatHistory);
+        
+        chatHistory.push({
+            role: "model",
+            parts: [ { text: response }]
+        });
+        
         console.log("Response from AI: ", response);
+        
         socket.emit("ai-message-response", response);
     });
 
